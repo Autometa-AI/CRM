@@ -12,7 +12,6 @@ function buildPayload(table: string, form: FormData) {
   for (const col of def.columns) {
     if (col.readonly) continue;
     if (col.type === "bool") {
-      // checkbox: present → true, absent → false
       payload[col.name] = form.get(col.name) !== null;
       continue;
     }
@@ -27,17 +26,17 @@ export async function createRow(table: string, form: FormData) {
   const { payload } = buildPayload(table, form);
   const { data, error } = await supabase.from(table).insert(payload).select().single();
   if (error) throw new Error(error.message);
-  revalidatePath(`/${table}`);
+  revalidatePath(`/settings/tables/${table}`);
   const def = getTable(table)!;
-  redirect(`/${table}/${encodeURIComponent(String(data[def.pk]))}`);
+  redirect(`/settings/tables/${table}/${encodeURIComponent(String(data[def.pk]))}`);
 }
 
 export async function updateRow(table: string, id: string, form: FormData) {
   const { def, payload } = buildPayload(table, form);
   const { error } = await supabase.from(table).update(payload).eq(def.pk, id);
   if (error) throw new Error(error.message);
-  revalidatePath(`/${table}`);
-  revalidatePath(`/${table}/${id}`);
+  revalidatePath(`/settings/tables/${table}`);
+  revalidatePath(`/settings/tables/${table}/${id}`);
 }
 
 export async function deleteRow(table: string, id: string) {
@@ -45,6 +44,103 @@ export async function deleteRow(table: string, id: string) {
   if (!def) throw new Error(`Unknown table: ${table}`);
   const { error } = await supabase.from(table).delete().eq(def.pk, id);
   if (error) throw new Error(error.message);
-  revalidatePath(`/${table}`);
-  redirect(`/${table}`);
+  revalidatePath(`/settings/tables/${table}`);
+  redirect(`/settings/tables/${table}`);
+}
+
+// ------------- CRM actions -------------
+
+export async function advanceStage(companyId: string, stage: string) {
+  const { error } = await supabase
+    .from("master_companies")
+    .update({ pipeline_stage: stage })
+    .eq("id", companyId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/pipeline");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${companyId}`);
+}
+
+export async function setOutreachStatus(companyId: string, status: string) {
+  const { error } = await supabase
+    .from("master_companies")
+    .update({ outreach_status: status })
+    .eq("id", companyId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${companyId}`);
+}
+
+export async function archiveCompany(companyId: string, archived: boolean) {
+  const { error } = await supabase
+    .from("master_companies")
+    .update({ is_archived: archived })
+    .eq("id", companyId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${companyId}`);
+}
+
+export async function logOutreach(form: FormData) {
+  const company_id = String(form.get("company_id") ?? "").trim();
+  const channel = String(form.get("channel") ?? "").trim();
+  if (!company_id || !channel) throw new Error("company_id and channel are required");
+
+  const now = new Date().toISOString();
+  const payload: Record<string, unknown> = {
+    company_id,
+    channel,
+    action: String(form.get("action") ?? "") || null,
+    subject: String(form.get("subject") ?? "") || null,
+    message_preview: String(form.get("message_preview") ?? "") || null,
+    sent_via: String(form.get("sent_via") ?? "") || null,
+    sent_at: now,
+    was_opened: form.get("was_opened") !== null,
+    was_replied: form.get("was_replied") !== null,
+  };
+
+  const { error } = await supabase.from("outreach_log").insert(payload);
+  if (error) throw new Error(error.message);
+
+  await supabase
+    .from("master_companies")
+    .update({ last_contacted_at: now, outreach_status: "sent" })
+    .eq("id", company_id);
+
+  revalidatePath("/outreach");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${company_id}`);
+}
+
+export async function updateDealStage(dealId: string, stage: string) {
+  const patch: Record<string, unknown> = { deal_stage: stage };
+  if (stage === "completed" || stage === "active") patch.closed_at = new Date().toISOString().slice(0, 10);
+  const { error } = await supabase.from("deals").update(patch).eq("id", dealId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/deals");
+}
+
+export async function createDeal(form: FormData) {
+  const payload: Record<string, unknown> = {
+    company_id: String(form.get("company_id") ?? "") || null,
+    deal_name: String(form.get("deal_name") ?? "") || null,
+    service_type: String(form.get("service_type") ?? "") || null,
+    deal_value: form.get("deal_value") ? parseFloat(String(form.get("deal_value"))) : null,
+    currency: String(form.get("currency") ?? "AED"),
+    deal_stage: String(form.get("deal_stage") ?? "proposal"),
+    notes: String(form.get("notes") ?? "") || null,
+  };
+  if (!payload.company_id || !payload.deal_name) throw new Error("company_id and deal_name are required");
+  const { error } = await supabase.from("deals").insert(payload);
+  if (error) throw new Error(error.message);
+  revalidatePath("/deals");
+  revalidatePath(`/leads/${payload.company_id}`);
+}
+
+export async function matchRawToMaster(rawTable: string, rawId: string, masterId: string) {
+  const allowed = ["raw_govt_data", "raw_directory_data", "raw_paid_data", "raw_platform_data", "raw_maps_data"];
+  if (!allowed.includes(rawTable)) throw new Error("Invalid raw table");
+  const { error } = await supabase.from(rawTable).update({ matched_master_id: masterId }).eq("id", rawId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/raw");
 }

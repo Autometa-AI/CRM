@@ -31,15 +31,21 @@ export default async function TableListPage({
 
   return (
     <div>
+      <div className="mb-4 text-sm">
+        <Link href="/settings/tables" className="text-slate-500 hover:text-slate-900">← All tables</Link>
+      </div>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold">{def.label}</h1>
           <div className="text-sm text-slate-500">
-            {count ?? 0} rows{def.readOnly && <span className="ml-2 text-amber-600">(read-only view)</span>}
+            <span className="font-mono text-xs">{def.name}</span> · {count ?? 0} rows
+            {def.readOnly && <span className="ml-2 text-amber-600">(read-only view)</span>}
           </div>
         </div>
         {!def.readOnly && (
-          <Link href={`/${def.name}/new`} className="rounded bg-slate-900 text-white px-3 py-1.5 text-sm">+ New</Link>
+          <Link href={`/settings/tables/${def.name}/new`} className="rounded bg-slate-900 text-white px-3 py-1.5 text-sm">
+            + New
+          </Link>
         )}
       </div>
 
@@ -69,7 +75,7 @@ export default async function TableListPage({
                   })}
                   <td className="px-3 py-2 text-right">
                     {!def.readOnly && id && (
-                      <Link href={`/${def.name}/${encodeURIComponent(id)}`} className="text-slate-700 underline">Edit</Link>
+                      <Link href={`/settings/tables/${def.name}/${encodeURIComponent(id)}`} className="text-slate-700 underline">Edit</Link>
                     )}
                   </td>
                 </tr>
@@ -83,10 +89,10 @@ export default async function TableListPage({
       </div>
 
       <div className="flex items-center gap-3 mt-4 text-sm">
-        {page > 1 && <Link href={`/${def.name}?page=${page - 1}`} className="underline">← Prev</Link>}
+        {page > 1 && <Link href={`/settings/tables/${def.name}?page=${page - 1}`} className="underline">← Prev</Link>}
         <span className="text-slate-500">Page {page}</span>
         {count !== null && count !== undefined && page * PAGE_SIZE < count && (
-          <Link href={`/${def.name}?page=${page + 1}`} className="underline">Next →</Link>
+          <Link href={`/settings/tables/${def.name}?page=${page + 1}`} className="underline">Next →</Link>
         )}
       </div>
     </div>

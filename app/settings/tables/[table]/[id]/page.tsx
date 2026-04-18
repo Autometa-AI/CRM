@@ -28,7 +28,7 @@ export default async function EditRowPage({ params }: { params: { table: string;
   return (
     <div>
       <div className="mb-4 text-sm">
-        <Link href={`/${def.name}`} className="text-slate-500 hover:underline">← {def.label}</Link>
+        <Link href={`/settings/tables/${def.name}`} className="text-slate-500 hover:underline">← {def.label}</Link>
       </div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Edit {def.label}</h1>

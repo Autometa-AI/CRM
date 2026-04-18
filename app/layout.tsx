@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Autometa CRM",
-  description: "Admin dashboard",
+  description: "Lead-gen CRM for UAE real estate",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 min-w-0 p-6 lg:p-8">{children}</main>
         </div>
       </body>
     </html>

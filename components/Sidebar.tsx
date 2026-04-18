@@ -1,30 +1,82 @@
-import Link from "next/link";
-import { TABLES } from "@/lib/tables";
+"use client";
 
-export function Sidebar({ active }: { active?: string }) {
-  const editable = TABLES.filter(t => !t.readOnly);
-  const views = TABLES.filter(t => t.readOnly);
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const NAV: { section?: string; items: { href: string; label: string; icon: string }[] }[] = [
+  {
+    items: [
+      { href: "/", label: "Dashboard", icon: "◆" },
+    ],
+  },
+  {
+    section: "Sales",
+    items: [
+      { href: "/leads", label: "Leads", icon: "◎" },
+      { href: "/pipeline", label: "Pipeline", icon: "▤" },
+      { href: "/outreach", label: "Outreach", icon: "➤" },
+      { href: "/deals", label: "Deals", icon: "$" },
+    ],
+  },
+  {
+    section: "Operations",
+    items: [
+      { href: "/finances", label: "Finances", icon: "₪" },
+      { href: "/raw", label: "Raw Data", icon: "⇲" },
+    ],
+  },
+  {
+    section: "System",
+    items: [
+      { href: "/settings/tables", label: "Tables", icon: "▥" },
+    ],
+  },
+];
+
+export function Sidebar() {
+  const pathname = usePathname() ?? "/";
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <aside className="w-64 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0 overflow-y-auto">
+    <aside className="w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0 overflow-y-auto">
       <div className="p-4 border-b border-slate-200">
-        <Link href="/" className="font-semibold text-slate-900">Autometa CRM</Link>
-        <div className="text-xs text-slate-500">Admin dashboard</div>
+        <Link href="/" className="flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white text-sm font-bold">A</span>
+          <div>
+            <div className="font-semibold text-slate-900 leading-tight">Autometa</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500">CRM</div>
+          </div>
+        </Link>
       </div>
       <nav className="p-2 text-sm">
-        <div className="px-2 pt-2 pb-1 text-xs uppercase tracking-wide text-slate-400">Tables</div>
-        {editable.map(t => (
-          <Link key={t.name} href={`/${t.name}`}
-            className={`block rounded px-2 py-1.5 ${active === t.name ? "bg-slate-900 text-white" : "hover:bg-slate-100"}`}>
-            {t.label}
-          </Link>
-        ))}
-        <div className="px-2 pt-4 pb-1 text-xs uppercase tracking-wide text-slate-400">Views</div>
-        {views.map(t => (
-          <Link key={t.name} href={`/${t.name}`}
-            className={`block rounded px-2 py-1.5 ${active === t.name ? "bg-slate-900 text-white" : "hover:bg-slate-100"}`}>
-            {t.label}
-          </Link>
+        {NAV.map((group, i) => (
+          <div key={i} className={i > 0 ? "mt-4" : ""}>
+            {group.section && (
+              <div className="px-2 pb-1 text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+                {group.section}
+              </div>
+            )}
+            {group.items.map(item => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 ${
+                    active
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className={`w-4 text-center text-xs ${active ? "text-white/70" : "text-slate-400"}`}>
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         ))}
       </nav>
     </aside>

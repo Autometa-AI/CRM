@@ -16,7 +16,7 @@ export default function NewRowPage({ params }: { params: { table: string } }) {
   return (
     <div>
       <div className="mb-4 text-sm">
-        <Link href={`/${def.name}`} className="text-slate-500 hover:underline">← {def.label}</Link>
+        <Link href={`/settings/tables/${def.name}`} className="text-slate-500 hover:underline">← {def.label}</Link>
       </div>
       <h1 className="text-2xl font-semibold mb-6">New {def.label}</h1>
       <RowForm def={def} action={action} submitLabel="Create" />
