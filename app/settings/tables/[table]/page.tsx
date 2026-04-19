@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { getTable, TableDef } from "@/lib/tables";
-import { TableWorkspace } from "@/components/tables/TableWorkspace";
+import { getTable, TableDef, type Column } from "@/lib/tables";
+import { TableWorkspace, type FilterDef } from "@/components/tables/TableWorkspace";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const PAGE_SIZE = 50;
 
@@ -12,7 +14,6 @@ const PAGE_SIZE = 50;
 const SAFE_TEXT_NAME = /name|email|phone|number|website|city|address|domain|title|subject|area|zone|status|office|recipient/i;
 
 function getSearchableColumns(def: TableDef): string[] {
-  // Views have a single wildcard column; use listColumns filtered by name heuristic.
   if (def.columns.length === 1 && def.columns[0].name === "*") {
     return (def.listColumns ?? []).filter((c) => SAFE_TEXT_NAME.test(c));
   }
@@ -25,13 +26,26 @@ function getSearchableColumns(def: TableDef): string[] {
   });
 }
 
+function getFilterableColumns(def: TableDef): FilterDef[] {
+  // Views with a wildcard column — no filters (we don't know the types).
+  if (def.columns.length === 1 && def.columns[0].name === "*") return [];
+  return def.columns
+    .filter((c: Column) => c.type === "enum" || c.type === "bool")
+    .map<FilterDef>((c: Column) => ({
+      name: c.name,
+      type: c.type as "enum" | "bool",
+      values: c.type === "enum" ? c.enumValues ?? [] : undefined,
+    }));
+}
+
 export default async function TableListPage({
   params,
   searchParams,
 }: {
   params: { table: string };
-  searchParams: { page?: string; q?: string };
+  searchParams: Record<string, string | undefined>;
 }) {
+  noStore();
   const def = getTable(params.table);
   if (!def) notFound();
 
@@ -42,11 +56,30 @@ export default async function TableListPage({
   const to = from + PAGE_SIZE - 1;
 
   const searchable = getSearchableColumns(def);
+  const filterable = getFilterableColumns(def);
+
+  // Pick up any ?f_<column>=value filter params
+  const activeFilters: Record<string, string> = {};
+  for (const f of filterable) {
+    const v = searchParams[`f_${f.name}`];
+    if (v) activeFilters[f.name] = v;
+  }
+
   let query = supabase.from(def.name).select("*", { count: "exact" });
   if (q && searchable.length > 0) {
     const filter = searchable.map((c) => `${c}.ilike.%${q}%`).join(",");
     query = query.or(filter);
   }
+  for (const [col, val] of Object.entries(activeFilters)) {
+    const f = filterable.find((ff) => ff.name === col);
+    if (!f) continue;
+    if (f.type === "bool") {
+      query = query.eq(col, val === "true");
+    } else {
+      query = query.eq(col, val);
+    }
+  }
+
   query = query.range(from, to);
   if (def.orderBy) query = query.order(def.orderBy.col, { ascending: def.orderBy.asc });
 
@@ -80,6 +113,8 @@ export default async function TableListPage({
         pageSize={PAGE_SIZE}
         initialQuery={qRaw}
         searchableColumns={searchable}
+        filters={filterable}
+        activeFilters={activeFilters}
       />
     </div>
   );
