@@ -17,19 +17,23 @@ async function tableCounts(): Promise<Row[]> {
 }
 
 async function masterBreakdown() {
-  const { data, error } = await supabase
-    .from("master_companies")
-    .select("pipeline_stage, company_type");
-  if (error || !data) return { byStage: {}, byType: {}, total: 0 };
+  // Supabase's default row limit is 1000; using head:true + count:exact
+  // gives the real total without dragging rows across the wire.
+  const stages = ["raw", "enriched", "outreach", "replied", "qualified", "client"] as const;
+  const [totalRes, ...stageRes] = await Promise.all([
+    supabase.from("master_companies").select("*", { count: "exact", head: true }),
+    ...stages.map((s) =>
+      supabase
+        .from("master_companies")
+        .select("*", { count: "exact", head: true })
+        .eq("pipeline_stage", s),
+    ),
+  ]);
   const byStage: Record<string, number> = {};
-  const byType: Record<string, number> = {};
-  for (const r of data) {
-    const s = (r as Record<string, string | null>).pipeline_stage ?? "raw";
-    const t = (r as Record<string, string | null>).company_type ?? "unknown";
-    byStage[s] = (byStage[s] ?? 0) + 1;
-    byType[t] = (byType[t] ?? 0) + 1;
-  }
-  return { byStage, byType, total: data.length };
+  stages.forEach((s, i) => {
+    byStage[s] = stageRes[i].count ?? 0;
+  });
+  return { byStage, byType: {} as Record<string, number>, total: totalRes.count ?? 0 };
 }
 
 const STAGE_ORDER = ["raw", "enriched", "outreach", "replied", "qualified", "client"];
