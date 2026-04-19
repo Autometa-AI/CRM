@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ingest:govt": "tsx scripts/ingest_raw_govt.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "@types/papaparse": "^5.5.2",
+    "csv-parse": "^5.5.6",
     "next": "14.2.15",
+    "papaparse": "^5.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -21,6 +25,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.2"
   }
 }

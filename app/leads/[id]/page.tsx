@@ -310,7 +310,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
 }
 
 async function loadRawMatches(id: string) {
-  const tables = ["raw_govt_data", "raw_directory_data", "raw_paid_data", "raw_platform_data", "raw_maps_data"];
+  const tables = ["raw_govt_data", "raw_govt_people_data", "raw_govt_projects_data", "raw_paid_data", "raw_platform_data"];
   const results = await Promise.all(
     tables.map(t =>
       supabase.from(t).select("id,company_name").eq("matched_master_id", id).limit(5).then(r => [t, r.data ?? []] as const)
