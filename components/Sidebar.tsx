@@ -30,6 +30,7 @@ const NAV: { section?: string; items: { href: string; label: string; icon: strin
     section: "System",
     items: [
       { href: "/settings/tables", label: "Tables", icon: "▥" },
+      { href: "/dedup-review", label: "Dedup review", icon: "⤳" },
     ],
   },
 ];
