@@ -7,11 +7,11 @@ import { formatRelative } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 const SOURCES: { table: string; label: string; description: string; timeField: string }[] = [
-  { table: "raw_govt_data", label: "Government", description: "DLD, RERA, Abu Dhabi TAMM/DMT", timeField: "scraped_at" },
-  { table: "raw_directory_data", label: "Directory", description: "UAE business directories & listing sites", timeField: "scraped_at" },
-  { table: "raw_paid_data", label: "Paid DB", description: "Apollo, Clay, Clearbit imports", timeField: "fetched_at" },
-  { table: "raw_platform_data", label: "Platform", description: "Property Finder, Bayut agencies", timeField: "scraped_at" },
-  { table: "raw_maps_data", label: "Maps", description: "Google Maps places & reviews", timeField: "scraped_at" },
+  { table: "raw_govt_data", label: "Govt • Brokerages", description: "DLD broker offices (companies)", timeField: "scraped_at" },
+  { table: "raw_govt_people_data", label: "Govt • Individual Brokers", description: "DLD licensed brokers (people)", timeField: "scraped_at" },
+  { table: "raw_govt_projects_data", label: "Govt • Projects", description: "DLD active & pending projects (per developer)", timeField: "scraped_at" },
+  { table: "raw_paid_data", label: "Paid DB", description: "Apollo, Clay, Clearbit imports (fed by Enrich button)", timeField: "fetched_at" },
+  { table: "raw_platform_data", label: "Platform", description: "Property Finder, Bayut agencies (for listings scoring)", timeField: "scraped_at" },
 ];
 
 export default async function RawDataPage() {

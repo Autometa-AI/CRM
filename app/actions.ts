@@ -138,7 +138,7 @@ export async function createDeal(form: FormData) {
 }
 
 export async function matchRawToMaster(rawTable: string, rawId: string, masterId: string) {
-  const allowed = ["raw_govt_data", "raw_directory_data", "raw_paid_data", "raw_platform_data", "raw_maps_data"];
+  const allowed = ["raw_govt_data", "raw_govt_people_data", "raw_govt_projects_data", "raw_paid_data", "raw_platform_data"];
   if (!allowed.includes(rawTable)) throw new Error("Invalid raw table");
   const { error } = await supabase.from(rawTable).update({ matched_master_id: masterId }).eq("id", rawId);
   if (error) throw new Error(error.message);
