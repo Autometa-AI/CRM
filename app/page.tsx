@@ -119,13 +119,13 @@ export default async function Dashboard() {
       {/* Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-ink">Dashboard</h1>
-          <p className="text-sm text-ink-muted mt-1">
+          <h1 className="text-[28px] font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">
             Pipeline health, outreach performance, and revenue at a glance.
           </p>
         </div>
-        <div className="text-xs text-ink-subtle">
-          Amounts in <span className="font-medium text-ink-muted">INR</span> · live FX
+        <div className="text-xs text-slate-400">
+          Amounts in <span className="font-medium text-slate-500">INR</span> · live FX
         </div>
       </div>
 
@@ -170,7 +170,7 @@ export default async function Dashboard() {
             action={
               <Link
                 href="/pipeline"
-                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 font-medium"
               >
                 Kanban <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
               </Link>
@@ -182,13 +182,13 @@ export default async function Dashboard() {
                 <div className="w-24 shrink-0">
                   <StatusPill value={f.stage} kind="pipeline" />
                 </div>
-                <div className="flex-1 h-7 rounded-lg bg-line/40 overflow-hidden relative">
+                <div className="flex-1 h-7 rounded-lg bg-slate-100 overflow-hidden relative">
                   <div
-                    className="h-7 bg-gradient-to-r from-brand-500 to-brand-400 transition-all"
+                    className="h-7 bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all"
                     style={{ width: `${f.pct}%` }}
                   />
                   <div className="absolute inset-0 flex items-center px-3 text-xs font-semibold tabular-nums">
-                    <span className={f.pct > 25 ? "text-white" : "text-ink"}>
+                    <span className={f.pct > 25 ? "text-white" : "text-slate-900"}>
                       {f.count.toLocaleString()}
                     </span>
                   </div>
@@ -204,10 +204,10 @@ export default async function Dashboard() {
             <Metric label="Sent" value={sent} />
             <Metric label="Opened" value={`${opened} (${openRate}%)`} />
             <Metric label="Replied" value={`${replied} (${replyRate}%)`} tone={replyRate >= 10 ? "positive" : "default"} />
-            <div className="pt-3 border-t border-line">
+            <div className="pt-3 border-t border-slate-200">
               <Link
                 href="/outreach"
-                className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium"
+                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 View outreach log <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
               </Link>
@@ -229,7 +229,7 @@ export default async function Dashboard() {
             action={
               <Link
                 href="/leads"
-                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 font-medium"
               >
                 All leads <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
               </Link>
@@ -241,12 +241,12 @@ export default async function Dashboard() {
                 <Link
                   key={l.id}
                   href={`/leads/${l.id}`}
-                  className="flex items-center gap-3 py-3 hover:bg-line/30 -mx-3 px-3 rounded-lg transition-colors"
+                  className="flex items-center gap-3 py-3 hover:bg-slate-50 -mx-3 px-3 rounded-lg transition-colors"
                 >
                   <Avatar name={l.company_name} size={36} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-ink truncate">{l.company_name}</div>
-                    <div className="text-xs text-ink-subtle">
+                    <div className="font-medium text-sm text-slate-900 truncate">{l.company_name}</div>
+                    <div className="text-xs text-slate-400">
                       {prettyEnum(l.city)} · {prettyEnum(l.company_type)}
                     </div>
                   </div>
@@ -276,7 +276,7 @@ export default async function Dashboard() {
             action={
               <Link
                 href="/outreach"
-                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 font-medium"
               >
                 Full log <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
               </Link>
@@ -290,8 +290,8 @@ export default async function Dashboard() {
                     <StatusPill value={o.channel} kind="channel" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-ink truncate">{o.subject || o.action || "—"}</div>
-                    <div className="text-xs text-ink-subtle mt-0.5">{formatRelative(o.sent_at)}</div>
+                    <div className="text-sm text-slate-900 truncate">{o.subject || o.action || "—"}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{formatRelative(o.sent_at)}</div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {o.was_replied && <StatusPill value={o.reply_sentiment ?? "replied"} kind="sentiment" />}
@@ -323,10 +323,10 @@ function Metric({
   value: string | number;
   tone?: "default" | "positive";
 }) {
-  const valueClass = tone === "positive" ? "text-emerald-700" : "text-ink";
+  const valueClass = tone === "positive" ? "text-emerald-700" : "text-slate-900";
   return (
     <div className="flex items-baseline justify-between">
-      <span className="text-sm text-ink-muted">{label}</span>
+      <span className="text-sm text-slate-500">{label}</span>
       <span className={`text-lg font-semibold tabular-nums ${valueClass}`}>{value}</span>
     </div>
   );
