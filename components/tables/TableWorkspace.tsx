@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition, FormEvent } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { DeveloperPanel } from "@/components/tables/DeveloperPanel";
 import { formatCell, type Column, type TableDef } from "@/lib/tables";
@@ -29,6 +29,8 @@ export function TableWorkspace({
   count,
   page,
   pageSize,
+  initialQuery = "",
+  searchableColumns = [],
 }: {
   def: TableDef;
   rows: Row[];
@@ -36,6 +38,8 @@ export function TableWorkspace({
   count: number | null;
   page: number;
   pageSize: number;
+  initialQuery?: string;
+  searchableColumns?: string[];
 }) {
   const [selected, setSelected] = useState<Row | null>(null);
   const [editing, setEditing] = useState(false);
@@ -46,22 +50,27 @@ export function TableWorkspace({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{def.label}</h1>
           <div className="text-sm text-slate-500">
-            {count?.toLocaleString() ?? 0} rows
+            {count?.toLocaleString() ?? 0} {initialQuery ? "matches" : "rows"}
             {def.readOnly && <span className="ml-2 text-amber-600">· read-only view</span>}
           </div>
         </div>
-        {!def.readOnly && (
-          <button
-            onClick={() => setAdding(true)}
-            className="rounded bg-slate-900 text-white px-3 py-1.5 text-sm hover:bg-slate-700"
-          >
-            + Add
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {searchableColumns.length > 0 && (
+            <SearchBox tableName={def.name} initialValue={initialQuery} columnHints={searchableColumns} />
+          )}
+          {!def.readOnly && (
+            <button
+              onClick={() => setAdding(true)}
+              className="shrink-0 rounded bg-slate-900 text-white px-3 py-1.5 text-sm hover:bg-slate-700"
+            >
+              + Add
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-auto bg-white border border-slate-200 rounded-lg">
@@ -509,6 +518,74 @@ function Pagination({ tableName, page, pageSize, count }: { tableName: string; p
       {page > 1 && <a href={`/settings/tables/${tableName}?page=${page - 1}`} className="hover:underline">← Prev</a>}
       <span>Page {page} of {totalPages}</span>
       {page < totalPages && <a href={`/settings/tables/${tableName}?page=${page + 1}`} className="hover:underline">Next →</a>}
+    </div>
+  );
+}
+
+function SearchBox({
+  tableName,
+  initialValue,
+  columnHints,
+}: {
+  tableName: string;
+  initialValue: string;
+  columnHints: string[];
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [value, setValue] = useState(initialValue);
+
+  // Debounce URL updates so we don't navigate on every keystroke
+  useEffect(() => {
+    if (value === initialValue) return;
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      if (value.trim()) params.set("q", value.trim());
+      else params.delete("q");
+      params.delete("page"); // reset to first page on new search
+      router.push(`${pathname}?${params.toString()}`);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const placeholder = columnHints.length
+    ? `Search ${columnHints.slice(0, 3).map(prettyLabel).join(", ")}${columnHints.length > 3 ? "…" : ""}`
+    : "Search";
+
+  return (
+    <div className="relative">
+      <svg
+        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+      >
+        <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        aria-label={`Search ${tableName}`}
+        className="w-56 md:w-80 rounded border border-slate-300 bg-white pl-8 pr-8 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => setValue("")}
+          aria-label="Clear search"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
