@@ -24,9 +24,13 @@ export interface Column {
   enumValues?: string[];
 }
 
+export type TableCategory = "leads" | "sources" | "pipeline" | "operations" | "views";
+
 export interface TableDef {
   name: string;
   label: string;
+  description?: string;       // shown under label in the tables index
+  category?: TableCategory;
   pk: string;
   readOnly?: boolean;        // view
   orderBy?: { col: string; asc: boolean };
@@ -54,7 +58,9 @@ const UPDATED: Column = { name: "updated_at", type: "timestamptz", readonly: tru
 export const TABLES: TableDef[] = [
   {
     name: "master_companies",
-    label: "Master Companies",
+    label: "Master Leads",
+    description: "Your master list of real estate companies — deduped from all sources",
+    category: "leads",
     pk: "id",
     orderBy: { col: "created_at", asc: false },
     listColumns: ["company_name","domain","city","company_type","pipeline_stage","lead_score","is_archived"],
@@ -86,10 +92,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "raw_govt_data",
-    label: "Raw • Govt",
+    label: "DLD Broker Companies",
+    description: "Licensed real estate brokerage offices from Dubai Land Department",
+    category: "sources",
     pk: "id",
     orderBy: { col: "scraped_at", asc: false },
-    listColumns: ["company_name","license_number","emirate","status","scraped_at"],
+    listColumns: ["company_name","license_number","email","phone","website","emirate"],
     columns: [
       ID,
       { name: "company_name", type: "text", required: true },
@@ -112,10 +120,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "raw_govt_people_data",
-    label: "Raw • Govt People",
+    label: "DLD Individual Brokers",
+    description: "RERA-licensed individual brokers — contact directly",
+    category: "sources",
     pk: "id",
     orderBy: { col: "scraped_at", asc: false },
-    listColumns: ["full_name","broker_number","office_name","email","phone","scraped_at"],
+    listColumns: ["full_name","broker_number","office_name","email","phone"],
     columns: [
       ID,
       { name: "full_name", type: "text", required: true },
@@ -134,10 +144,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "raw_govt_projects_data",
-    label: "Raw • Govt Projects",
+    label: "DLD Developer Projects",
+    description: "Active and pending real estate projects — derives the developer list",
+    category: "sources",
     pk: "id",
     orderBy: { col: "scraped_at", asc: false },
-    listColumns: ["project_name","developer_name","project_status","project_value","area","scraped_at"],
+    listColumns: ["project_name","developer_name","project_status","project_value","area","percent_completed"],
     columns: [
       ID,
       { name: "project_number", type: "text" },
@@ -172,10 +184,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "raw_paid_data",
-    label: "Raw • Paid",
+    label: "External Data (Clay, Apollo)",
+    description: "Enrichment results from paid B2B providers — filled by the Enrich button",
+    category: "sources",
     pk: "id",
     orderBy: { col: "fetched_at", asc: false },
-    listColumns: ["company_name","domain","employee_count","industry","source_provider","fetched_at"],
+    listColumns: ["company_name","domain","employee_count","industry","source_provider"],
     columns: [
       ID,
       { name: "company_name", type: "text", required: true },
@@ -196,10 +210,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "raw_platform_data",
-    label: "Raw • Platform",
+    label: "Property Platforms",
+    description: "Active listings from Property Finder, Bayut, Dubizzle — buying signal for scoring",
+    category: "sources",
     pk: "id",
     orderBy: { col: "scraped_at", asc: false },
-    listColumns: ["company_name","platform","listing_count","active_listings","rating","scraped_at"],
+    listColumns: ["company_name","platform","listing_count","active_listings","rating"],
     columns: [
       ID,
       { name: "company_name", type: "text", required: true },
@@ -217,7 +233,9 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "enrichment_data",
-    label: "Enrichment Data",
+    label: "Enrichment Details",
+    description: "Per-company LinkedIn, tech stack, decision makers, and more",
+    category: "pipeline",
     pk: "id",
     orderBy: { col: "enriched_at", asc: false },
     listColumns: ["company_id","linkedin_industry","linkedin_employee_count","has_crm","is_hiring","enriched_at"],
@@ -251,6 +269,8 @@ export const TABLES: TableDef[] = [
   {
     name: "ai_insights",
     label: "AI Insights",
+    description: "LLM-generated ICP fit, pain points, and outreach hooks per lead",
+    category: "pipeline",
     pk: "id",
     orderBy: { col: "generated_at", asc: false },
     listColumns: ["company_id","icp_fit_score","tech_maturity","website_quality","recommended_service","generated_at"],
@@ -276,6 +296,8 @@ export const TABLES: TableDef[] = [
   {
     name: "lead_scores",
     label: "Lead Scores",
+    description: "Scoring breakdown (website, listings, hiring, tech, reviews) per lead",
+    category: "pipeline",
     pk: "id",
     orderBy: { col: "total_score", asc: false },
     listColumns: ["company_id","total_score","score_website","score_listings","score_hiring","score_poor_tech","score_reviews"],
@@ -296,7 +318,9 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "outreach_log",
-    label: "Outreach Log",
+    label: "Outreach History",
+    description: "Every email, LinkedIn, phone, WhatsApp touchpoint",
+    category: "pipeline",
     pk: "id",
     orderBy: { col: "sent_at", asc: false },
     listColumns: ["company_id","channel","action","subject","was_opened","was_replied","sent_at"],
@@ -325,6 +349,8 @@ export const TABLES: TableDef[] = [
   {
     name: "deals",
     label: "Deals",
+    description: "Sales opportunities across all stages (proposal → won)",
+    category: "pipeline",
     pk: "id",
     orderBy: { col: "created_at", asc: false },
     listColumns: ["deal_name","company_id","service_type","deal_value","currency","deal_stage","closed_at"],
@@ -344,7 +370,9 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "finances",
-    label: "Finances",
+    label: "Business Expenses",
+    description: "Recurring and one-time agency spend",
+    category: "operations",
     pk: "id",
     orderBy: { col: "date", asc: false },
     listColumns: ["name","category","amount","currency","recipient","date","recurrence","is_active"],
@@ -365,33 +393,45 @@ export const TABLES: TableDef[] = [
 
   // ---- Read-only views ----
   {
-    name: "active_leads", label: "View • Active Leads", pk: "id", readOnly: true,
+    name: "active_leads", label: "Active Leads", category: "views",
+    description: "Leads currently being contacted (outreach or replied)",
+    pk: "id", readOnly: true,
     orderBy: { col: "total_score", asc: false },
     listColumns: ["company_name","city","pipeline_stage","total_score","icp_fit_score","touchpoint_count","last_outreach_at"],
     columns: [{ name: "*", type: "text" }],
   },
   {
-    name: "qualified_leads", label: "View • Qualified Leads", pk: "id", readOnly: true,
+    name: "qualified_leads", label: "Qualified Leads", category: "views",
+    description: "Leads that replied and showed interest — ready for a proposal",
+    pk: "id", readOnly: true,
     listColumns: ["company_name","city","total_score","icp_fit_score","latest_reply_sentiment"],
     columns: [{ name: "*", type: "text" }],
   },
   {
-    name: "clients", label: "View • Clients", pk: "id", readOnly: true,
+    name: "clients", label: "Clients", category: "views",
+    description: "Companies you've closed as clients",
+    pk: "id", readOnly: true,
     listColumns: ["company_name","city","recommended_service"],
     columns: [{ name: "*", type: "text" }],
   },
   {
-    name: "pipeline_summary", label: "View • Pipeline Summary", pk: "pipeline_stage", readOnly: true,
+    name: "pipeline_summary", label: "Pipeline Stats", category: "views",
+    description: "Counts and rates per pipeline stage",
+    pk: "pipeline_stage", readOnly: true,
     listColumns: ["pipeline_stage","city","company_type","company_count","avg_lead_score","enrichment_rate","reply_rate"],
     columns: [{ name: "*", type: "text" }],
   },
   {
-    name: "monthly_spend", label: "View • Monthly Spend", pk: "month", readOnly: true,
+    name: "monthly_spend", label: "Monthly Expenses", category: "views",
+    description: "Expenses rolled up by month and category",
+    pk: "month", readOnly: true,
     listColumns: ["month","category","currency","total_amount","expense_count"],
     columns: [{ name: "*", type: "text" }],
   },
   {
-    name: "dld_developers", label: "View • DLD Developers", pk: "developer_number", readOnly: true,
+    name: "dld_developers", label: "Dubai Developers", category: "views",
+    description: "Every active developer with their project count, value, and unit totals",
+    pk: "developer_number", readOnly: true,
     orderBy: { col: "project_count", asc: false },
     listColumns: ["developer_name","project_count","active_projects","finished_projects","total_value_aed","total_units"],
     columns: [{ name: "*", type: "text" }],

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getTable } from "@/lib/tables";
 import { RowForm } from "@/components/RowForm";
@@ -23,6 +23,7 @@ export default async function EditRowPage({ params }: { params: { table: string;
   async function destroy() {
     "use server";
     await deleteRow(params.table, id);
+    redirect(`/settings/tables/${params.table}`);
   }
 
   return (

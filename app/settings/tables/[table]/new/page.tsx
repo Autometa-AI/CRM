@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTable } from "@/lib/tables";
 import { RowForm } from "@/components/RowForm";
 import { createRow } from "@/app/actions";
@@ -11,6 +11,7 @@ export default function NewRowPage({ params }: { params: { table: string } }) {
   async function action(form: FormData) {
     "use server";
     await createRow(params.table, form);
+    redirect(`/settings/tables/${params.table}`);
   }
 
   return (

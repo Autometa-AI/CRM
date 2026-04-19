@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getTable, coerceValue } from "@/lib/tables";
 
@@ -28,7 +27,7 @@ export async function createRow(table: string, form: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(`/settings/tables/${table}`);
   const def = getTable(table)!;
-  redirect(`/settings/tables/${table}/${encodeURIComponent(String(data[def.pk]))}`);
+  return { id: String(data[def.pk]) };
 }
 
 export async function updateRow(table: string, id: string, form: FormData) {
@@ -45,7 +44,6 @@ export async function deleteRow(table: string, id: string) {
   const { error } = await supabase.from(table).delete().eq(def.pk, id);
   if (error) throw new Error(error.message);
   revalidatePath(`/settings/tables/${table}`);
-  redirect(`/settings/tables/${table}`);
 }
 
 // ------------- CRM actions -------------
@@ -143,4 +141,36 @@ export async function matchRawToMaster(rawTable: string, rawId: string, masterId
   const { error } = await supabase.from(rawTable).update({ matched_master_id: masterId }).eq("id", rawId);
   if (error) throw new Error(error.message);
   revalidatePath("/raw");
+}
+
+// ------------- Detail drill-downs -------------
+
+/** Full row for a given table + id (used when clicking from a related panel). */
+export async function getRow(table: string, id: string): Promise<Record<string, unknown> | null> {
+  const def = getTable(table);
+  if (!def) throw new Error(`Unknown table: ${table}`);
+  const { data, error } = await supabase.from(table).select("*").eq(def.pk, id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Developer stats (from dld_developers view) + their projects. Optionally exclude one project. */
+export async function getDeveloperDetail(
+  developerNumber: string,
+  excludeProjectId?: string,
+): Promise<{
+  stats: Record<string, unknown> | null;
+  projects: Record<string, unknown>[];
+}> {
+  const [statsRes, projectsRes] = await Promise.all([
+    supabase.from("dld_developers").select("*").eq("developer_number", developerNumber).maybeSingle(),
+    supabase
+      .from("raw_govt_projects_data")
+      .select("id,project_name,project_status,project_value,percent_completed,area,cnt_unit")
+      .eq("developer_number", developerNumber)
+      .order("project_value", { ascending: false, nullsFirst: false })
+      .limit(100),
+  ]);
+  const projects = (projectsRes.data ?? []).filter((p) => !excludeProjectId || String(p.id) !== excludeProjectId);
+  return { stats: statsRes.data ?? null, projects };
 }

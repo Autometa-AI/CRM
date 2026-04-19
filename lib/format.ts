@@ -36,6 +36,12 @@ export function formatMoney(amount: unknown, currency = "AED"): string {
   return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 }
 
+export function formatINR(amount: unknown): string {
+  const n = typeof amount === "number" ? amount : parseFloat(String(amount ?? ""));
+  if (!isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+}
+
 export function formatNumber(value: unknown): string {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
   if (!isFinite(n)) return "—";
