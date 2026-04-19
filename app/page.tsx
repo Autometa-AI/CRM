@@ -5,7 +5,9 @@ import { StatusPill } from "@/components/ui/StatusPill";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatMoney, formatRelative, prettyEnum } from "@/lib/format";
+import { PageRefresher } from "@/components/util/PageRefresher";
+import { formatINR, formatRelative, prettyEnum } from "@/lib/format";
+import { convertSum } from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -64,28 +66,33 @@ export default async function Dashboard() {
   const mtdDeals = (deals.data ?? []).filter(d =>
     d.closed_at && new Date(d.closed_at) >= monthStart && (d.deal_stage === "completed" || d.deal_stage === "active")
   );
-  const mtdRevenue = mtdDeals.reduce((s, d) => s + (Number(d.deal_value) || 0), 0);
-  const currency = String(mtdDeals[0]?.currency ?? "AED");
+  const mtdRevenue = await convertSum(
+    mtdDeals.map(d => ({ amount: Number(d.deal_value) || 0, currency: String(d.currency ?? "AED") })),
+    "INR",
+  );
 
-  const mtdBurn = (finances.data ?? [])
-    .filter(f => f.is_active !== false)
-    .reduce((s, f) => s + (Number(f.amount) || 0), 0);
-  const burnCurrency = String((finances.data ?? [])[0]?.currency ?? "AED");
+  const mtdBurn = await convertSum(
+    (finances.data ?? [])
+      .filter(f => f.is_active !== false)
+      .map(f => ({ amount: Number(f.amount) || 0, currency: String(f.currency ?? "AED") })),
+    "INR",
+  );
 
   const maxStageCount = Math.max(1, ...Array.from(stageCounts.values()));
 
   return (
     <div className="space-y-6">
+      <PageRefresher intervalMs={30_000} />
       <div>
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-slate-500">Pipeline, outreach, and revenue at a glance.</p>
+        <p className="text-sm text-slate-500">Pipeline, outreach, and revenue at a glance — all money in INR (live rate).</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiTile label="Total companies" value={totalCompanies.toLocaleString()} hint="in master_companies" />
+        <KpiTile label="Total companies" value={totalCompanies.toLocaleString()} hint="in master leads" />
         <KpiTile label="Reply rate (30d)" value={`${replyRate}%`} hint={`${replied} of ${sent} messages`} tone={replyRate >= 10 ? "positive" : "default"} />
-        <KpiTile label="MTD revenue" value={formatMoney(mtdRevenue, currency)} hint={`${mtdDeals.length} deal${mtdDeals.length === 1 ? "" : "s"} closed`} tone="positive" />
-        <KpiTile label="MTD burn" value={formatMoney(mtdBurn, burnCurrency)} hint="expenses this month" tone={mtdBurn > mtdRevenue ? "warning" : "default"} />
+        <KpiTile label="MTD revenue" value={formatINR(mtdRevenue)} hint={`${mtdDeals.length} deal${mtdDeals.length === 1 ? "" : "s"} closed`} tone="positive" />
+        <KpiTile label="MTD burn" value={formatINR(mtdBurn)} hint="expenses this month" tone={mtdBurn > mtdRevenue ? "warning" : "default"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

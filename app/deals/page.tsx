@@ -53,10 +53,10 @@ export default async function DealsPage() {
       </div>
 
       <Card>
-        <SectionHeader title="New deal" subtitle="Log a new opportunity" />
+        <SectionHeader title="New deal" subtitle="Log an opportunity with a prospect. Stage moves it through your sales pipeline — proposal → negotiation → contract → active → completed (won)." />
         <form action={createDeal} className="grid grid-cols-1 md:grid-cols-6 gap-2 text-sm">
           <select name="company_id" required className="rounded border border-slate-300 px-2 py-1.5 md:col-span-2">
-            <option value="">Company *</option>
+            <option value="">Prospect company *</option>
             {(companies.data ?? []).map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
           </select>
           <input name="deal_name" required placeholder="Deal name *" className="rounded border border-slate-300 px-2 py-1.5 md:col-span-2" />
@@ -65,7 +65,11 @@ export default async function DealsPage() {
             {SERVICES.map(s => <option key={s} value={s}>{prettyEnum(s)}</option>)}
           </select>
           <input name="deal_value" type="number" step="any" placeholder="Value" className="rounded border border-slate-300 px-2 py-1.5" />
-          <input name="currency" defaultValue="AED" placeholder="Currency" className="rounded border border-slate-300 px-2 py-1.5" />
+          <select name="currency" defaultValue="AED" className="rounded border border-slate-300 px-2 py-1.5">
+            <option value="AED">AED</option>
+            <option value="USD">USD</option>
+            <option value="INR">INR</option>
+          </select>
           <select name="deal_stage" defaultValue="proposal" className="rounded border border-slate-300 px-2 py-1.5">
             {STAGES.map(s => <option key={s} value={s}>{prettyEnum(s)}</option>)}
           </select>
