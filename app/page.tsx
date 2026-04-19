@@ -1,4 +1,13 @@
 import Link from "next/link";
+import {
+  Users,
+  MessageSquare,
+  TrendingUp,
+  Flame,
+  ArrowUpRight,
+  Receipt,
+} from "lucide-react";
+import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { Card, KpiTile, SectionHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
@@ -10,6 +19,7 @@ import { formatINR, formatRelative, prettyEnum } from "@/lib/format";
 import { convertSum } from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const STAGES = ["raw", "enriched", "outreach", "replied", "qualified", "client"] as const;
 
@@ -17,15 +27,29 @@ async function loadDashboard() {
   const since30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
 
+  // master_companies counts — head queries bypass the 1,000 row limit
+  const stageCountPromises = STAGES.map((s) =>
+    supabase
+      .from("master_companies")
+      .select("*", { count: "exact", head: true })
+      .eq("pipeline_stage", s),
+  );
+
   const [
-    companies,
+    totalCompaniesRes,
+    ...stageCounts
+  ] = await Promise.all([
+    supabase.from("master_companies").select("*", { count: "exact", head: true }),
+    ...stageCountPromises,
+  ]);
+
+  const [
     outreach30,
     deals,
     finances,
     hotLeads,
     recentOutreach,
   ] = await Promise.all([
-    supabase.from("master_companies").select("id,pipeline_stage,outreach_status", { count: "exact" }),
     supabase.from("outreach_log").select("was_opened,was_replied,channel,sent_at").gte("sent_at", since30),
     supabase.from("deals").select("deal_value,currency,deal_stage,closed_at,created_at"),
     supabase.from("finances").select("amount,currency,date,is_active,recurrence,category").gte("date", monthStart),
@@ -35,153 +59,239 @@ async function loadDashboard() {
       .eq("is_archived", false)
       .is("last_contacted_at", null)
       .order("lead_score", { ascending: false, nullsFirst: false })
-      .limit(8),
+      .limit(6),
     supabase
       .from("outreach_log")
       .select("id,company_id,channel,action,subject,was_opened,was_replied,sent_at,reply_sentiment")
       .order("sent_at", { ascending: false, nullsFirst: false })
-      .limit(10),
+      .limit(8),
   ]);
 
-  return { companies, outreach30, deals, finances, hotLeads, recentOutreach };
+  const totalCompanies = totalCompaniesRes.count ?? 0;
+  const stageCountMap: Record<string, number> = {};
+  STAGES.forEach((s, i) => {
+    stageCountMap[s] = stageCounts[i].count ?? 0;
+  });
+
+  return { totalCompanies, stageCountMap, outreach30, deals, finances, hotLeads, recentOutreach };
 }
 
 export default async function Dashboard() {
-  const { companies, outreach30, deals, finances, hotLeads, recentOutreach } = await loadDashboard();
-
-  const totalCompanies = companies.count ?? 0;
-  const stageCounts = new Map<string, number>();
-  (companies.data ?? []).forEach(r => {
-    const s = String(r.pipeline_stage ?? "raw");
-    stageCounts.set(s, (stageCounts.get(s) ?? 0) + 1);
-  });
+  noStore();
+  const { totalCompanies, stageCountMap, outreach30, deals, finances, hotLeads, recentOutreach } = await loadDashboard();
 
   const sent = outreach30.data?.length ?? 0;
-  const opened = outreach30.data?.filter(r => r.was_opened).length ?? 0;
-  const replied = outreach30.data?.filter(r => r.was_replied).length ?? 0;
+  const opened = outreach30.data?.filter((r) => r.was_opened).length ?? 0;
+  const replied = outreach30.data?.filter((r) => r.was_replied).length ?? 0;
   const openRate = sent ? Math.round((opened / sent) * 100) : 0;
   const replyRate = sent ? Math.round((replied / sent) * 100) : 0;
 
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const mtdDeals = (deals.data ?? []).filter(d =>
-    d.closed_at && new Date(d.closed_at) >= monthStart && (d.deal_stage === "completed" || d.deal_stage === "active")
+  const mtdDeals = (deals.data ?? []).filter(
+    (d) =>
+      d.closed_at &&
+      new Date(d.closed_at) >= monthStart &&
+      (d.deal_stage === "completed" || d.deal_stage === "active"),
   );
   const mtdRevenue = await convertSum(
-    mtdDeals.map(d => ({ amount: Number(d.deal_value) || 0, currency: String(d.currency ?? "AED") })),
+    mtdDeals.map((d) => ({ amount: Number(d.deal_value) || 0, currency: String(d.currency ?? "AED") })),
     "INR",
   );
 
   const mtdBurn = await convertSum(
     (finances.data ?? [])
-      .filter(f => f.is_active !== false)
-      .map(f => ({ amount: Number(f.amount) || 0, currency: String(f.currency ?? "AED") })),
+      .filter((f) => f.is_active !== false)
+      .map((f) => ({ amount: Number(f.amount) || 0, currency: String(f.currency ?? "AED") })),
     "INR",
   );
 
-  const maxStageCount = Math.max(1, ...Array.from(stageCounts.values()));
+  const maxStageCount = Math.max(1, ...Object.values(stageCountMap));
+  const funnel = STAGES.map((s) => ({
+    stage: s,
+    count: stageCountMap[s] ?? 0,
+    pct: ((stageCountMap[s] ?? 0) / maxStageCount) * 100,
+  }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-[1400px]">
       <PageRefresher intervalMs={30_000} />
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-slate-500">Pipeline, outreach, and revenue at a glance — all money in INR (live rate).</p>
+
+      {/* Header */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-semibold tracking-tight text-ink">Dashboard</h1>
+          <p className="text-sm text-ink-muted mt-1">
+            Pipeline health, outreach performance, and revenue at a glance.
+          </p>
+        </div>
+        <div className="text-xs text-ink-subtle">
+          Amounts in <span className="font-medium text-ink-muted">INR</span> · live FX
+        </div>
       </div>
 
+      {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiTile label="Total companies" value={totalCompanies.toLocaleString()} hint="in master leads" />
-        <KpiTile label="Reply rate (30d)" value={`${replyRate}%`} hint={`${replied} of ${sent} messages`} tone={replyRate >= 10 ? "positive" : "default"} />
-        <KpiTile label="MTD revenue" value={formatINR(mtdRevenue)} hint={`${mtdDeals.length} deal${mtdDeals.length === 1 ? "" : "s"} closed`} tone="positive" />
-        <KpiTile label="MTD burn" value={formatINR(mtdBurn)} hint="expenses this month" tone={mtdBurn > mtdRevenue ? "warning" : "default"} />
+        <KpiTile
+          label="Total leads"
+          value={totalCompanies.toLocaleString()}
+          hint="companies in master list"
+          icon={<Users className="h-3.5 w-3.5" strokeWidth={2} />}
+          tone="brand"
+        />
+        <KpiTile
+          label="Reply rate · 30d"
+          value={`${replyRate}%`}
+          hint={`${replied.toLocaleString()} of ${sent.toLocaleString()} messages`}
+          icon={<MessageSquare className="h-3.5 w-3.5" strokeWidth={2} />}
+          tone={replyRate >= 10 ? "positive" : "default"}
+        />
+        <KpiTile
+          label="MTD revenue"
+          value={formatINR(mtdRevenue)}
+          hint={`${mtdDeals.length} deal${mtdDeals.length === 1 ? "" : "s"} closed`}
+          icon={<TrendingUp className="h-3.5 w-3.5" strokeWidth={2} />}
+          tone="positive"
+        />
+        <KpiTile
+          label="MTD burn"
+          value={formatINR(mtdBurn)}
+          hint="expenses this month"
+          icon={<Receipt className="h-3.5 w-3.5" strokeWidth={2} />}
+          tone={mtdBurn > mtdRevenue && mtdBurn > 0 ? "warning" : "default"}
+        />
       </div>
 
+      {/* Pipeline + outreach metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <SectionHeader
             title="Pipeline funnel"
-            subtitle="Companies per stage"
-            action={<Link href="/pipeline" className="text-xs text-slate-500 hover:text-slate-900">View Kanban →</Link>}
+            subtitle="Companies by stage"
+            action={
+              <Link
+                href="/pipeline"
+                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+              >
+                Kanban <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+              </Link>
+            }
           />
-          <div className="space-y-2">
-            {STAGES.map(s => {
-              const c = stageCounts.get(s) ?? 0;
-              const pct = (c / maxStageCount) * 100;
-              return (
-                <div key={s} className="flex items-center gap-3">
-                  <div className="w-24 shrink-0"><StatusPill value={s} kind="pipeline" /></div>
-                  <div className="flex-1 h-6 rounded bg-slate-50 overflow-hidden relative">
-                    <div className="h-6 bg-gradient-to-r from-slate-700 to-slate-500" style={{ width: `${pct}%` }} />
-                    <div className="absolute inset-0 flex items-center px-2 text-xs font-medium text-slate-900 mix-blend-difference">
-                      {c}
-                    </div>
+          <div className="space-y-3">
+            {funnel.map((f) => (
+              <div key={f.stage} className="flex items-center gap-4">
+                <div className="w-24 shrink-0">
+                  <StatusPill value={f.stage} kind="pipeline" />
+                </div>
+                <div className="flex-1 h-7 rounded-lg bg-line/40 overflow-hidden relative">
+                  <div
+                    className="h-7 bg-gradient-to-r from-brand-500 to-brand-400 transition-all"
+                    style={{ width: `${f.pct}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center px-3 text-xs font-semibold tabular-nums">
+                    <span className={f.pct > 25 ? "text-white" : "text-ink"}>
+                      {f.count.toLocaleString()}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </Card>
 
         <Card>
-          <SectionHeader title="Outreach (30d)" subtitle="Aggregate touchpoint metrics" />
-          <div className="space-y-3">
+          <SectionHeader title="Outreach · 30d" subtitle="Aggregate performance" />
+          <div className="space-y-4">
             <Metric label="Sent" value={sent} />
             <Metric label="Opened" value={`${opened} (${openRate}%)`} />
-            <Metric label="Replied" value={`${replied} (${replyRate}%)`} />
+            <Metric label="Replied" value={`${replied} (${replyRate}%)`} tone={replyRate >= 10 ? "positive" : "default"} />
+            <div className="pt-3 border-t border-line">
+              <Link
+                href="/outreach"
+                className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium"
+              >
+                View outreach log <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+              </Link>
+            </div>
           </div>
         </Card>
       </div>
 
+      {/* Hot leads + recent outreach */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <SectionHeader
-            title="Hottest leads"
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                <Flame className="h-4 w-4 text-amber-500" strokeWidth={2} /> Hot leads
+              </span>
+            }
             subtitle="High score · not yet contacted"
-            action={<Link href="/leads" className="text-xs text-slate-500 hover:text-slate-900">All leads →</Link>}
+            action={
+              <Link
+                href="/leads"
+                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+              >
+                All leads <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+              </Link>
+            }
           />
           {hotLeads.data && hotLeads.data.length > 0 ? (
-            <div className="divide-y divide-slate-100">
-              {hotLeads.data.map(l => (
+            <div className="divide-y divide-line">
+              {hotLeads.data.map((l) => (
                 <Link
                   key={l.id}
                   href={`/leads/${l.id}`}
-                  className="flex items-center gap-3 py-2.5 hover:bg-slate-50 -mx-2 px-2 rounded"
+                  className="flex items-center gap-3 py-3 hover:bg-line/30 -mx-3 px-3 rounded-lg transition-colors"
                 >
-                  <Avatar name={l.company_name} size={32} />
+                  <Avatar name={l.company_name} size={36} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-slate-900 truncate">{l.company_name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="font-medium text-sm text-ink truncate">{l.company_name}</div>
+                    <div className="text-xs text-ink-subtle">
                       {prettyEnum(l.city)} · {prettyEnum(l.company_type)}
                     </div>
                   </div>
-                  <div className="w-20 shrink-0"><ScoreBar value={l.lead_score ?? null} size="sm" /></div>
-                  <div className="w-20 shrink-0 text-right"><StatusPill value={l.pipeline_stage} kind="pipeline" /></div>
+                  <div className="w-24 shrink-0">
+                    <ScoreBar value={l.lead_score ?? null} size="sm" />
+                  </div>
+                  <div className="w-24 shrink-0 text-right">
+                    <StatusPill value={l.pipeline_stage} kind="pipeline" />
+                  </div>
                 </Link>
               ))}
             </div>
           ) : (
             <EmptyState
               title="No leads yet"
-              description="Add companies to master_companies or import from raw sources."
+              description="Add companies or import from raw sources to start scoring."
               ctaLabel="Add company"
-              ctaHref="/settings/tables/master_companies/new"
+              ctaHref="/settings/tables/master_companies"
             />
           )}
         </Card>
 
         <Card>
           <SectionHeader
-            title="Recent outreach"
-            subtitle="Latest touchpoints"
-            action={<Link href="/outreach" className="text-xs text-slate-500 hover:text-slate-900">Full log →</Link>}
+            title="Recent activity"
+            subtitle="Latest outreach touchpoints"
+            action={
+              <Link
+                href="/outreach"
+                className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink font-medium"
+              >
+                Full log <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+              </Link>
+            }
           />
           {recentOutreach.data && recentOutreach.data.length > 0 ? (
-            <div className="divide-y divide-slate-100">
-              {recentOutreach.data.map(o => (
-                <div key={o.id} className="py-2.5 flex items-start gap-3">
-                  <div className="w-16 shrink-0 pt-0.5"><StatusPill value={o.channel} kind="channel" /></div>
+            <div className="divide-y divide-line">
+              {recentOutreach.data.map((o) => (
+                <div key={o.id} className="py-3 flex items-start gap-3">
+                  <div className="w-16 shrink-0 pt-0.5">
+                    <StatusPill value={o.channel} kind="channel" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-slate-900 truncate">{o.subject || o.action || "—"}</div>
-                    <div className="text-xs text-slate-500">{formatRelative(o.sent_at)}</div>
+                    <div className="text-sm text-ink truncate">{o.subject || o.action || "—"}</div>
+                    <div className="text-xs text-ink-subtle mt-0.5">{formatRelative(o.sent_at)}</div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {o.was_replied && <StatusPill value={o.reply_sentiment ?? "replied"} kind="sentiment" />}
@@ -204,11 +314,20 @@ export default async function Dashboard() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function Metric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "positive";
+}) {
+  const valueClass = tone === "positive" ? "text-emerald-700" : "text-ink";
   return (
     <div className="flex items-baseline justify-between">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-lg font-semibold tabular-nums">{value}</span>
+      <span className="text-sm text-ink-muted">{label}</span>
+      <span className={`text-lg font-semibold tabular-nums ${valueClass}`}>{value}</span>
     </div>
   );
 }
