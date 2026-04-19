@@ -23,6 +23,12 @@ const SYSTEM_FIELDS = new Set([
   "matched_contact_id",
 ]);
 
+export type FilterDef = {
+  name: string;
+  type: "enum" | "bool";
+  values?: string[];
+};
+
 export function TableWorkspace({
   def,
   rows,
@@ -32,6 +38,8 @@ export function TableWorkspace({
   pageSize,
   initialQuery = "",
   searchableColumns = [],
+  filters = [],
+  activeFilters = {},
 }: {
   def: TableDef;
   rows: Row[];
@@ -41,6 +49,8 @@ export function TableWorkspace({
   pageSize: number;
   initialQuery?: string;
   searchableColumns?: string[];
+  filters?: FilterDef[];
+  activeFilters?: Record<string, string>;
 }) {
   const [selected, setSelected] = useState<Row | null>(null);
   const [editing, setEditing] = useState(false);
@@ -73,6 +83,10 @@ export function TableWorkspace({
           )}
         </div>
       </div>
+
+      {filters.length > 0 && (
+        <FilterBar filters={filters} activeFilters={activeFilters} tableName={def.name} />
+      )}
 
       <div className="overflow-auto bg-white border border-slate-200 rounded-lg">
         <table className="min-w-full text-sm">
@@ -523,6 +537,101 @@ function Pagination({ tableName, page, pageSize, count }: { tableName: string; p
       <span>Page {page} of {totalPages}</span>
       {page < totalPages && <a href={`/settings/tables/${tableName}?page=${page + 1}`} className="hover:underline">Next →</a>}
     </div>
+  );
+}
+
+function FilterBar({
+  filters,
+  activeFilters,
+  tableName,
+}: {
+  filters: FilterDef[];
+  activeFilters: Record<string, string>;
+  tableName: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const apply = (colName: string, value: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    const key = `f_${colName}`;
+    if (value) params.set(key, value);
+    else params.delete(key);
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const clearAll = () => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    for (const f of filters) params.delete(`f_${f.name}`);
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const hasActive = Object.keys(activeFilters).length > 0;
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs text-slate-500 mr-1">Filter:</span>
+      {filters.map((f) => (
+        <FilterDropdown
+          key={f.name}
+          filter={f}
+          value={activeFilters[f.name] ?? ""}
+          onChange={(v) => apply(f.name, v)}
+        />
+      ))}
+      {hasActive && (
+        <button
+          onClick={clearAll}
+          className="text-xs text-slate-500 hover:text-slate-900 underline ml-1"
+          aria-label={`Clear all filters on ${tableName}`}
+        >
+          Clear filters
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FilterDropdown({
+  filter,
+  value,
+  onChange,
+}: {
+  filter: FilterDef;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const active = value !== "";
+  return (
+    <label
+      className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs cursor-pointer ${
+        active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-700"
+      }`}
+    >
+      <span className={`${active ? "text-white/80" : "text-slate-500"}`}>{prettyLabel(filter.name)}:</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`bg-transparent focus:outline-none font-medium ${active ? "text-white" : "text-slate-900"}`}
+      >
+        <option value="" className="text-slate-900">All</option>
+        {filter.type === "bool" ? (
+          <>
+            <option value="true" className="text-slate-900">Yes</option>
+            <option value="false" className="text-slate-900">No</option>
+          </>
+        ) : (
+          (filter.values ?? []).map((v) => (
+            <option key={v} value={v} className="text-slate-900">
+              {v.replace(/_/g, " ")}
+            </option>
+          ))
+        )}
+      </select>
+    </label>
   );
 }
 

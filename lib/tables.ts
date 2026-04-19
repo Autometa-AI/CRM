@@ -233,12 +233,12 @@ export const TABLES: TableDef[] = [
   },
   {
     name: "enrichment_data",
-    label: "Enrichment Details",
-    description: "Per-company LinkedIn, tech stack, decision makers, and more",
+    label: "Enrichment Details (raw)",
+    description: "Raw enrichment table. Prefer the Enrichment Overview view below for readability.",
     category: "pipeline",
     pk: "id",
     orderBy: { col: "enriched_at", asc: false },
-    listColumns: ["company_id","linkedin_industry","linkedin_employee_count","has_crm","is_hiring","enriched_at"],
+    listColumns: ["company_id","enriched_by","enriched_at"],
     columns: [
       ID,
       { name: "company_id", type: "uuid", required: true },
@@ -426,6 +426,14 @@ export const TABLES: TableDef[] = [
     description: "Expenses rolled up by month and category",
     pk: "month", readOnly: true,
     listColumns: ["month","category","currency","total_amount","expense_count"],
+    columns: [{ name: "*", type: "text" }],
+  },
+  {
+    name: "enrichment_overview", label: "Enrichment Overview", category: "views",
+    description: "Per-company enrichment roll-up: decision-maker count, LinkedIn, hiring status",
+    pk: "id", readOnly: true,
+    orderBy: { col: "enriched_at", asc: false },
+    listColumns: ["company_name","company_type","city","decision_maker_count","linkedin_industry","linkedin_employee_count","has_crm","is_hiring","enriched_at"],
     columns: [{ name: "*", type: "text" }],
   },
   {

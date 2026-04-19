@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { TABLES, TableCategory, TableDef } from "@/lib/tables";
 import { Card, SectionHeader } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Row = { def: TableDef; count: number | null; error?: string };
 
@@ -47,6 +49,7 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 export default async function TablesIndex() {
+  noStore();
   const [rows, master] = await Promise.all([tableCounts(), masterBreakdown()]);
   const byCategory = (cat: TableCategory) => rows.filter((r) => r.def.category === cat);
 
