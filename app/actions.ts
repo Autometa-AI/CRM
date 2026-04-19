@@ -154,6 +154,26 @@ export async function getRow(table: string, id: string): Promise<Record<string, 
   return data;
 }
 
+/** Decision-makers + aggregate enrichment for a master company. */
+export async function getCompanyDecisionMakers(companyId: string): Promise<{
+  decision_makers: Array<Record<string, unknown>>;
+  enriched_by: string | null;
+  enriched_at: string | null;
+}> {
+  const { data } = await supabase
+    .from("enrichment_data")
+    .select("decision_makers, enriched_by, enriched_at")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const dm = data?.decision_makers;
+  const list = Array.isArray(dm) ? (dm as Array<Record<string, unknown>>) : [];
+  return {
+    decision_makers: list,
+    enriched_by: (data?.enriched_by as string | null) ?? null,
+    enriched_at: (data?.enriched_at as string | null) ?? null,
+  };
+}
+
 /** Developer stats (from dld_developers view) + their projects. Optionally exclude one project. */
 export async function getDeveloperDetail(
   developerNumber: string,

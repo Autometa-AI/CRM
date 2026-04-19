@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition, FormEvent } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { DeveloperPanel } from "@/components/tables/DeveloperPanel";
+import { DecisionMakersPanel } from "@/components/tables/DecisionMakersPanel";
 import { formatCell, type Column, type TableDef } from "@/lib/tables";
 import { createRow, updateRow, deleteRow, getRow } from "@/app/actions";
 
@@ -332,6 +333,9 @@ function RowModal({
                   if (fresh) onSelectRow(fresh);
                 }}
               />
+            )}
+            {def.name === "master_companies" && row.id && (
+              <DecisionMakersPanel companyId={String(row.id)} />
             )}
           </>
         )
