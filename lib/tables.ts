@@ -492,6 +492,14 @@ export const TABLES: TableDef[] = [
     columns: [{ name: "*", type: "text" }],
   },
   {
+    name: "discovery_calls_by_person", label: "Discovery Calls (by person)", category: "views",
+    description: "One row per person — click for full booking + event history",
+    pk: "email", readOnly: true,
+    orderBy: { col: "last_webhook_at", asc: false },
+    listColumns: ["full_name","email","phone","total_bookings","active_bookings","cancelled_bookings","latest_status","latest_scheduled"],
+    columns: [{ name: "*", type: "text" }],
+  },
+  {
     name: "dld_developers", label: "Dubai Developers", category: "views",
     description: "Every active developer with their project count, value, and unit totals",
     pk: "developer_number", readOnly: true,

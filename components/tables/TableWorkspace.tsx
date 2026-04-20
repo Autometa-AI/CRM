@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { DeveloperPanel } from "@/components/tables/DeveloperPanel";
 import { DecisionMakersPanel } from "@/components/tables/DecisionMakersPanel";
+import { DiscoveryCallHistoryPanel } from "@/components/tables/DiscoveryCallHistoryPanel";
 import { formatCell, type Column, type TableDef } from "@/lib/tables";
 import { createRow, updateRow, deleteRow, getRow } from "@/app/actions";
 
@@ -350,6 +351,9 @@ function RowModal({
             )}
             {def.name === "master_companies" && row.id && (
               <DecisionMakersPanel companyId={String(row.id)} />
+            )}
+            {def.name === "discovery_calls_by_person" && row.email && (
+              <DiscoveryCallHistoryPanel email={String(row.email)} />
             )}
           </>
         )

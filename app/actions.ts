@@ -174,6 +174,29 @@ export async function getCompanyDecisionMakers(companyId: string): Promise<{
   };
 }
 
+/** Bookings + event history for a person (by email) in the Cal.com feed. */
+export async function getDiscoveryCallHistory(email: string): Promise<{
+  bookings: Record<string, unknown>[];
+  events: Record<string, unknown>[];
+}> {
+  const [bookingsRes, eventsRes] = await Promise.all([
+    supabase
+      .from("raw_discovery_calls")
+      .select("id,booking_id,event_name,scheduled_start,scheduled_end,status,meeting_location,additional_notes,submitted_at")
+      .eq("email", email)
+      .order("scheduled_start", { ascending: false, nullsFirst: false }),
+    supabase
+      .from("raw_discovery_call_events")
+      .select("id,booking_id,trigger_event,status,scheduled_start,received_at")
+      .eq("email", email)
+      .order("received_at", { ascending: true }),
+  ]);
+  return {
+    bookings: bookingsRes.data ?? [],
+    events: eventsRes.data ?? [],
+  };
+}
+
 /** Developer stats (from dld_developers view) + their projects. Optionally exclude one project. */
 export async function getDeveloperDetail(
   developerNumber: string,
