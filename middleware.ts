@@ -8,7 +8,10 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set("x-pathname", pathname);
 
+  // Public endpoints (authenticate themselves via shared secret / HMAC).
   if (pathname.startsWith("/login")) return res;
+  if (pathname.startsWith("/api/leads/")) return res;
+  if (pathname.startsWith("/api/webhooks/")) return res;
 
   const secret = process.env.SESSION_SECRET ?? "autometa-crm-default-secret-change-in-production-2026";
   const token = req.cookies.get(AUTH_COOKIE)?.value;
