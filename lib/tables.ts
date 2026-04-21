@@ -24,7 +24,7 @@ export interface Column {
   enumValues?: string[];
 }
 
-export type TableCategory = "leads" | "sources" | "pipeline" | "operations" | "views";
+export type TableCategory = "leads" | "sources" | "pipeline" | "operations" | "views" | "content";
 
 export interface TableDef {
   name: string;
@@ -307,6 +307,47 @@ export const TABLES: TableDef[] = [
       { name: "logged_in_at", type: "timestamptz" },
       { name: "raw_payload", type: "json", hiddenInList: true },
       { name: "matched_master_id", type: "uuid" },
+    ],
+  },
+  {
+    name: "blog_posts",
+    label: "Blog Posts",
+    description: "Published, draft and AI-submitted blog posts. Edits publish live to autometa-ai.com/blog.",
+    category: "content",
+    pk: "id",
+    orderBy: { col: "updated_at", asc: false },
+    listColumns: ["title","category","status","source","author_name","read_minutes","published_at","updated_at"],
+    columns: [
+      ID,
+      { name: "slug", type: "text", required: true },
+      { name: "status", type: "enum", enumValues: ["draft","pending_review","published","archived"], required: true },
+      { name: "source", type: "enum", enumValues: ["manual","ai_agent","import"] },
+      { name: "source_model", type: "text" },
+
+      { name: "title", type: "text", required: true },
+      { name: "subtitle", type: "text" },
+      { name: "lede", type: "textarea" },
+      { name: "excerpt", type: "textarea", required: true },
+      { name: "category", type: "enum", enumValues: ["core","ai","custom","ops"], required: true },
+      { name: "tags", type: "text_array" },
+      { name: "cover_image_url", type: "text" },
+      { name: "read_minutes", type: "int" },
+
+      { name: "author_name", type: "text", required: true },
+      { name: "author_avatar_url", type: "text" },
+      { name: "author_role", type: "text" },
+      { name: "author_bio", type: "textarea" },
+
+      { name: "body_html", type: "textarea", hiddenInList: true },
+      { name: "seo_title", type: "text" },
+      { name: "seo_description", type: "textarea" },
+
+      { name: "published_at", type: "timestamptz" },
+      { name: "created_by", type: "text" },
+      { name: "reviewed_by", type: "text" },
+      { name: "reviewed_at", type: "timestamptz" },
+      { name: "raw_payload", type: "json", hiddenInList: true },
+      CREATED, UPDATED,
     ],
   },
   {
