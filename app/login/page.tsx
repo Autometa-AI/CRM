@@ -9,45 +9,54 @@ export default function LoginPage({
   searchParams: { from?: string; error?: string };
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{
+        background:
+          "radial-gradient(ellipse 60% 40% at 50% 0%, var(--accent-soft) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 50% 100%, rgba(11,74,58,0.06) 0%, transparent 55%), var(--bg)",
+      }}
+    >
       <Card className="w-full max-w-sm">
-        <div className="text-center mb-5">
-          <div className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-slate-900 text-white text-lg font-bold">
-            A
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <span className="h-2 w-2 rounded-full bg-brand-accent" aria-hidden />
+            <span className="font-serif text-lg text-ink tracking-[-0.01em] font-medium">
+              Autometa AI
+            </span>
           </div>
-          <h1 className="text-xl font-semibold text-slate-900 mt-3">Autometa CRM</h1>
-          <p className="text-sm text-slate-500">Admin sign in</p>
+          <h1 className="font-serif text-2xl text-ink mt-1">Welcome back</h1>
+          <p className="text-sm text-ink-mute mt-1">Sign in to the CRM.</p>
         </div>
         <form action={login} className="space-y-3">
           <input type="hidden" name="from" value={searchParams.from ?? "/"} />
           <div>
-            <label className="text-xs text-slate-500">Username</label>
+            <label className="text-xs text-ink-soft font-medium">Username</label>
             <input
               name="username"
               required
               autoFocus
               autoComplete="username"
-              className="mt-0.5 w-full rounded border border-slate-300 px-2.5 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-[--border] bg-surface px-3 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500">Password</label>
+            <label className="text-xs text-ink-soft font-medium">Password</label>
             <input
               name="password"
               type="password"
               required
               autoComplete="current-password"
-              className="mt-0.5 w-full rounded border border-slate-300 px-2.5 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-[--border] bg-surface px-3 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
             />
           </div>
           {searchParams.error && (
-            <div className="rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs px-2.5 py-1.5">
+            <div className="rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-2">
               {searchParams.error}
             </div>
           )}
           <button
             type="submit"
-            className="w-full rounded bg-slate-900 text-white px-3 py-2 text-sm font-medium hover:bg-slate-700"
+            className="w-full rounded-full bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-hover transition-colors"
           >
             Sign in
           </button>
