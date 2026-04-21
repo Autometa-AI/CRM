@@ -31,7 +31,7 @@ PROSE_RE = re.compile(
     r'<article class="prose">(.*?)</article>', re.DOTALL
 )
 
-def extract_body(path: Path) -> str | None:
+def extract_body(path: Path):
     html = path.read_text()
     m = PROSE_RE.search(html)
     if not m:

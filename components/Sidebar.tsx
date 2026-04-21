@@ -13,6 +13,7 @@ import {
   Table2,
   GitMerge,
   LogOut,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import { logout } from "@/app/login/actions";
@@ -38,6 +39,12 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/finances", label: "Finances", icon: Receipt },
       { href: "/raw", label: "Data sources", icon: Database },
+    ],
+  },
+  {
+    section: "Content",
+    items: [
+      { href: "/settings/tables/blog_posts", label: "Blog", icon: FileText },
     ],
   },
   {

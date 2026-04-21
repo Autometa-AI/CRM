@@ -56,6 +56,7 @@ export default async function TablesIndex() {
   const sources = byCategory("sources");
   const pipeline = byCategory("pipeline");
   const operations = byCategory("operations");
+  const content = byCategory("content");
   const views = byCategory("views");
   const masterRow = rows.find((r) => r.def.name === "master_companies");
 
@@ -111,6 +112,15 @@ export default async function TablesIndex() {
           {operations.map((r) => <TableCard key={r.def.name} row={r} />)}
         </CardGrid>
       </Section>
+
+      {/* ---- Content (Blog) ---- */}
+      {content.length > 0 && (
+        <Section title="Content" subtitle="Blog posts published on autometa-ai.com — edit, draft, or approve AI-submitted posts">
+          <CardGrid>
+            {content.map((r) => <TableCard key={r.def.name} row={r} />)}
+          </CardGrid>
+        </Section>
+      )}
 
       {/* ---- Saved views ---- */}
       <Section title="Saved views" subtitle="Read-only views rolling up your CRM data">
