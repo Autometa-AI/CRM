@@ -14,6 +14,7 @@ import {
   GitMerge,
   LogOut,
   FileText,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { logout } from "@/app/login/actions";
@@ -52,6 +53,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/settings/tables", label: "Tables", icon: Table2 },
       { href: "/dedup-review", label: "Dedup review", icon: GitMerge },
+      { href: "/seo-analysis", label: "SEO Analysis", icon: BarChart3 },
     ],
   },
 ];
